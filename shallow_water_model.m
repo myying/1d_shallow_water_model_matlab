@@ -1,17 +1,17 @@
-%clear all; close all;
+clear all; close all;
 
 %parameters
 dx=100000;
-dt=9900;
-nx=50;
-nt=20*dx/(10*dt);
+dt=1000;
+nx=500;
+nt=20000*dx/(10*dt);
 
 pi=4*atan(1.0);
 vel=10;
-hbar=8000;%base level of height
-amp=100;  %amplitude of hill
-hc=25;    %center location of hill
-hw=10;    %width of hill
+hbar=8000;  %base level of height
+amp=100;    %amplitude of hill
+hc=nx/2;    %center location of hill
+hw=nx/5;    %width of hill
 
 g=9.8;
 f=0.0001;
@@ -35,9 +35,6 @@ v(1:nx)=0.0;
 h(1:nx)=hbar;
 ind=ceil(hc-hw/2):floor(hc+hw/2);
 h(ind)=hbar+amp*(1+cos(2*pi*(ind-hc)/hw));
-%for j=jhin:jhend
-%  h(j)=h(j)+amp*(1.+sin(twopi*(j-jhin)/(jhend-jhin)-0.25*twopi));
-%end
 h0=h;
 tracer1=find(h==max(h),1); maxh(1)=max(h);
 ub=u; vb=v; hb=h;
