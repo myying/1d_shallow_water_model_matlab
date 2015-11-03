@@ -2,9 +2,9 @@ clear all; close all;
 
 %parameters
 dx=100000;
-dt=1000;
-nx=500;
-nt=20000*dx/(10*dt);
+dt=100;
+nx=50;
+nt=50*dx/(10*dt);
 
 pi=4*atan(1.0);
 vel=10;
@@ -17,14 +17,14 @@ g=9.8;
 f=0.0001;
 kdif=10;
 
-nifcor=0;
-nifwind=0;
-nifdif=0;
+nifcor=1;
+nifwind=1;
+nifdif=1;
 nifad=1;
 
 scale_factor=nx;
 show_animation=1;
-animation_stride=1000;
+animation_stride=1;
 animation_delay=0.001;
 
 %initialize
@@ -46,20 +46,16 @@ dtcalc=dt;
 figure('Position',[100 100 560 560]);
 for n=1:nt
   j=2:nx-1;
-  ha(j)=hb(j)-nifad*u(j).*(dtcalc/dx2).*(h(j+1)-h(j-1)) - h(j).*(dtcalc/dx2).*(u(j+1)-u(j-1));
-  if(nifwind==1)
-    ua(j)=ub(j)-nifad*u(j).*(dtcalc/dx2).*(u(j+1)-u(j-1)) - (g*dtcalc/dx2)*(h(j+1)-h(j-1));
-  end
-  if(nifdif==1)
-    ha(j)=ha(j)+diffac*(hb(j+1)-2*hb(j)+hb(j-1));
-    if(nifwind==1)
-      ua(j)=ua(j)+diffac*(ub(j+1)-2*ub(j)+ub(j-1));
-    end
-  end
-  if(nifcor==1)
-    ua(j)=ua(j)+f*v(j)*dtcalc;
-    va(j)=vb(j)-nifad*u(j).*(dtcalc/dx2).*(v(j+1)-v(j-1)) - f*u(j)*dtcalc;
-  end
+  ha(j)=hb(j)-nifad*u(j).*(dtcalc/dx2).*(h(j+1)-h(j-1)) ...
+             -h(j).*(dtcalc/dx2).*(u(j+1)-u(j-1)) ...
+             +nifdif*diffac*(hb(j+1)-2*hb(j)+hb(j-1));
+  ua(j)=ub(j)-nifwind*nifad*u(j).*(dtcalc/dx2).*(u(j+1)-u(j-1)) ...
+             -nifwind*(g*dtcalc/dx2)*(h(j+1)-h(j-1)) ...
+             +nifcor*f*v(j)*dtcalc ...
+             +nifwind*nifdif*diffac*(ub(j+1)-2*ub(j)+ub(j-1));
+  va(j)=vb(j)-nifwind*nifad*u(j).*(dtcalc/dx2).*(v(j+1)-v(j-1)) ...
+             -nifcor*f*u(j)*dtcalc ...
+             +nifwind*nifdif*diffac*(vb(j+1)-2*vb(j)+vb(j-1));
 
   %boundary condition
   ua(1)=ua(nx-1); ua(nx)=ua(2);
@@ -79,10 +75,10 @@ for n=1:nt
     subplot(2,1,1)
     plot(x,h); hold on;
     %analytic solution for advection equation
-    x0=mod(x+vel*time/1000,max(x));
-    n0=find(x0(2:end)-x0(1:end-1) <0);
-    plot(x0(1:n0),h0(1:n0),'r'); 
-    plot(x0(n0+1:end),h0(n0+1:end),'r'); 
+    %x0=mod(x+vel*time/1000,max(x));
+    %n0=find(x0(2:end)-x0(1:end-1) <0);
+    %plot(x0(1:n0),h0(1:n0),'r'); 
+    %plot(x0(n0+1:end),h0(n0+1:end),'r'); 
     hold off; 
     axis([min(x) max(x) hbar-amp hbar+2*amp]);
     ylabel('height'); title(['t = ' num2str(time) ' s'])
