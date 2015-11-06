@@ -17,7 +17,7 @@ g=9.8;      %gravity
 f=0.0001;   %Coriolis
 kdif=10;    %diffuction coef
 
-numerics=3; %1:CTCS, 2:FTCS, 3: FTBS numerical schemes
+numerics=1; %1:CTCS, 2:FTCS, 3: FTBS numerical schemes
 
 nifcor=0;   %if 1, include Coriolis
 nifwind=0;  %if 1, include other terms besides Coriolis in u,v eqns.
@@ -26,8 +26,8 @@ nifad=1;    %if 1, include advection
 
 scale_factor=nx;       %scaling factor for plotting wind vectors
 show_animation=1;      %if 1, show animation; turn this off when profiling.
-animation_stride=1;    %if =n, skip every n frames
-animation_delay=0.001; %deley in between frame in seconds
+animation_stride=10;   %if =n, skip every n frames
+animation_delay=0.001; %delay in between frame in seconds
 
 %initial condition
 u(1:nx)=vel;
@@ -139,5 +139,6 @@ for n=1:nt
     disp(['model exploded at t=' num2str(time) 's (' num2str(n) ' steps)']); break; 
   end
 end
+
 t_end=cputime;
 disp(['It takes ' num2str(t_end-t_start) ' s']);
