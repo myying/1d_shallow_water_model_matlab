@@ -28,6 +28,8 @@ scale_factor=nx;       %scaling factor for plotting wind vectors
 show_animation=1;      %if 1, show animation; turn this off when profiling.
 animation_stride=10;   %if =n, skip every n frames
 animation_delay=0.001; %delay in between frame in seconds
+show_analytic=0;       %show analytical solution (linear advection eqn)
+show_wind=1;           %show wind vector
 
 %initial condition
 u(1:nx)=vel;
@@ -35,6 +37,7 @@ v(1:nx)=0.0;
 h(1:nx)=hbar;
 ind=ceil(hc-hw/2):floor(hc+hw/2);
 h(ind)=hbar+amp*(1+cos(2*pi*(ind-hc)/hw));
+
 h0=h;
 loc1=find(h==max(h),1); 
 maxh(1:nt+1)=NaN; maxh(1)=max(h);
@@ -106,25 +109,28 @@ for n=1:nt
   u(1)=u(nx-1); u(nx)=u(2);
   v(1)=v(nx-1); v(nx)=v(2);
   h(1)=h(nx-1); h(nx)=h(2);
-
+  
   %plot results
   if(show_animation==1 && mod(n,animation_stride)==0)
     subplot(2,1,1)
     plot(x,h);
-    %analytic solution for advection equation
-    %  hold on;
-    %  x0=mod(x+vel*time/1000,max(x));
-    %  n0=find(x0(2:end)-x0(1:end-1) <0);
-    %  plot(x0(1:n0),h0(1:n0),'r'); 
-    %  plot(x0(n0+1:end),h0(n0+1:end),'r'); hold off; 
+    if(show_analytic==1) %analytic solution for advection equation
+      hold on;
+      x0=mod(x+vel*time/1000,max(x));
+      n0=find(x0(2:end)-x0(1:end-1) <0);
+      plot(x0(1:n0),h0(1:n0),'r'); 
+      plot(x0(n0+1:end),h0(n0+1:end),'r'); hold off;
+    end
     axis([min(x) max(x) hbar-amp hbar+2*amp]);
     ylabel('height'); title(['t = ' num2str(time) ' s'])
     xlabel('x (km)')
-    subplot(2,1,2)
-    i=1:ceil(nx/30):nx;
-    quiver(x(i),0*x(i),u(i)*scale_factor,v(i)*scale_factor,'autoscale','off')
-    axis equal; axis([min(x) max(x) -max(x)/5 max(x)/5]);
-    xlabel('x (km)'); ylabel('y (km)');
+    if(show_wind==1)
+      subplot(2,1,2)
+      i=1:ceil(nx/30):nx;
+      quiver(x(i),0*x(i),u(i)*scale_factor,v(i)*scale_factor,'autoscale','off')
+      axis equal; axis([min(x) max(x) -max(x)/5 max(x)/5]);
+      xlabel('x (km)'); ylabel('y (km)');
+    end
     pause(animation_delay);
   end
   
@@ -141,4 +147,4 @@ for n=1:nt
 end
 
 t_end=cputime;
-disp(['It takes ' num2str(t_end-t_start) ' s']);
+disp(['model integration takes ' num2str(t_end-t_start) ' s']);
