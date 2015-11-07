@@ -3,11 +3,11 @@ clear all; close all;
 %parameters
 dx=100000;  %grid spacing (m)
 dt=1000;    %time step (s)
-nx=50;      %number of grid points
+nx=52;      %number of grid points (including 2 ghost nodes)
 nt=1000;    %number of time steps
 
 pi=4*atan(1.0);
-vel=10;     %advection velocity
+C=10;       %advection velocity
 hbar=8000;  %base level of height
 amp=100;    %amplitude of hill
 hc=25;      %center location of hill
@@ -28,11 +28,11 @@ scale_factor=nx;       %scaling factor for plotting wind vectors
 show_animation=1;      %if 1, show animation; turn this off when profiling.
 animation_stride=10;   %if =n, skip every n frames
 animation_delay=0.001; %delay in between frame in seconds
-show_analytic=0;       %show analytical solution (linear advection eqn)
+show_analytic=1;       %show analytical solution (linear advection eqn)
 show_wind=1;           %show wind vector
 
 %initial condition
-u(1:nx)=vel;
+u(1:nx)=C;
 v(1:nx)=0.0; 
 h(1:nx)=hbar;
 ind=ceil(hc-hw/2):floor(hc+hw/2);
@@ -116,28 +116,29 @@ for n=1:nt
     plot(x,h);
     if(show_analytic==1) %analytic solution for advection equation
       hold on;
-      x0=mod(x+vel*time/1000,max(x));
-      n0=find(x0(2:end)-x0(1:end-1) <0);
-      plot(x0(1:n0),h0(1:n0),'r'); 
-      plot(x0(n0+1:end),h0(n0+1:end),'r'); hold off;
+      x0=mod(x+C*time/1000,(nx-2)*dx/1000);
+      n0=find(x0(2:end-1)-x0(1:end-2)<0);
+      plot(x0(1:n0),h0(1:n0),'r');
+      plot(x0(n0+1:end-1),h0(n0+1:end-1),'r');
+      hold off;
     end
-    axis([min(x) max(x) hbar-amp hbar+2*amp]);
+    axis([dx/1000 (nx-2)*dx/1000 hbar-amp hbar+2*amp]);
     ylabel('height'); title(['t = ' num2str(time) ' s'])
     xlabel('x (km)')
     if(show_wind==1)
       subplot(2,1,2)
       i=1:ceil(nx/30):nx;
       quiver(x(i),0*x(i),u(i)*scale_factor,v(i)*scale_factor,'autoscale','off')
-      axis equal; axis([min(x) max(x) -max(x)/5 max(x)/5]);
+      axis equal; axis([dx (nx-2)*dx -(nx-2)*dx/5 (nx-2)*dx/5]/1000);
       xlabel('x (km)'); ylabel('y (km)');
     end
     pause(animation_delay);
   end
   
   m=20;
-  if(n==floor(m*dx/vel/dt)) %trace max(h) across m grid points
+  if(n==floor(m*dx/C/dt)) %trace max(h) across m grid points
     loc2=find(h==max(h),1);
-    Cd=(loc2-loc1)*dx/(floor(m*dx/vel/dt)*dt); disp(['Cd=' num2str(Cd)]);
+    Cd=(loc2-loc1)*dx/(floor(m*dx/C/dt)*dt); disp(['Cd=' num2str(Cd)]);
   end
   maxh(n+1)=max(h); %record h peak amplitude time series
   
