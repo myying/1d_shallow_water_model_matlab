@@ -36,7 +36,7 @@ u(1:nx)=C;
 v(1:nx)=0.0; 
 h(1:nx)=hbar;
 ind=ceil(hc-hw/2):floor(hc+hw/2);
-h(ind)=hbar+amp*(1+cos(2*pi*(ind-hc)/hw));
+h(ind)=hbar+(amp/2)*(1+cos(2*pi*(ind-hc)/hw));
 
 h0=h;
 loc1=find(h==max(h),1); 
