@@ -1,37 +1,43 @@
-clear all; close all;
+%clear all; 
+close all;
 
-%parameters
+%%%%%%%PARAMETERS
 dx=100000;  %grid spacing (m)
-dt=1000;    %time step (s)
-nx=52;      %number of grid points (including 2 ghost nodes)
-nt=1000;    %number of time steps
+dt=100;    %time step (s)
+nx=50;      %number of grid points (including 2 ghost nodes)
+nt=48*3600/dt;    %number of time steps
 
+%initial condition
 pi=4*atan(1.0);
-C=10;       %advection velocity
+C=100;       %advection velocity
 hbar=8000;  %base level of height
 amp=100;    %amplitude of hill
 hc=25;      %center location of hill
 hw=10;      %width of hill
 
+%physics parameters
 g=9.8;      %gravity
 f=0.0001;   %Coriolis
-kdif=10;    %diffuction coef
+kdif=0.01*dx*dx/(2*dt);    %diffuction coef
 
-numerics=1; %1:CTCS, 2:FTCS, 3: FTBS numerical schemes
+%numerical scheme switches
+advection_scheme=1; %1:CTCS, 2:FTCS, 3: FTBS numerical schemes
+%diffusion_scheme=2; %1:CTCS, 2:FTCS
 
+%forcing term switches
 nifcor=0;   %if 1, include Coriolis
 nifwind=0;  %if 1, include other terms besides Coriolis in u,v eqns.
-nifdif=0;   %if 1, include diffusion
-nifad=1;    %if 1, include advection
+nifdif=1;   %if 1, include diffusion
+nifad=0;    %if 1, include advection
 
 scale_factor=nx;       %scaling factor for plotting wind vectors
 show_animation=1;      %if 1, show animation; turn this off when profiling.
-animation_stride=10;   %if =n, skip every n frames
+animation_stride=3600/dt;   %if =n, skip every n frames
 animation_delay=0.001; %delay in between frame in seconds
-show_analytic=1;       %show analytical solution (linear advection eqn)
-show_wind=1;           %show wind vector
+show_analytic=0;       %show analytical solution (linear advection eqn)
+show_wind=0;           %show wind vector
 
-%initial condition
+%%%%%%%%INITIALIZE
 u(1:nx)=C;
 v(1:nx)=0.0; 
 h(1:nx)=hbar;
@@ -43,15 +49,16 @@ loc1=find(h==max(h),1);
 maxh(1:nt+1)=NaN; maxh(1)=max(h);
 x(1:nx)=(1:nx)*dx/1000;
 
-figure('Position',[100 100 560 560]);
+figure('Position',[100 100 560 560/2]);
 
-%run model
+%%%%%%%%%RUN MODEL
 time=0;  %time in seconds
 t_start=cputime;
 
 for n=1:nt
   j=2:nx-1;
-  if(numerics==1) %CTCS scheme (leapfrog)
+  
+  if(advection_scheme==1) %CTCS scheme (leapfrog)
     if(n==1)
       ub=u; vb=v; hb=h;
       ua=u; va=v; ha=h;
@@ -59,49 +66,45 @@ for n=1:nt
     else
       dtcalc=dt*2;
     end
-    diffac=kdif*dtcalc/dx/dx;
     ha(j)=hb(j)-nifad*u(j).*(dtcalc/(dx*2)).*(h(j+1)-h(j-1)) ...
-               -h(j).*(dtcalc/(dx*2)).*(u(j+1)-u(j-1)) ...
-               +nifdif*diffac*(h(j+1)-2*h(j)+h(j-1));
+               -h(j).*(dtcalc/(dx*2)).*(u(j+1)-u(j-1));
     ua(j)=ub(j)-nifwind*nifad*u(j).*(dtcalc/(dx*2)).*(u(j+1)-u(j-1)) ...
                -nifwind*(g*dtcalc/(dx*2))*(h(j+1)-h(j-1)) ...
-               +nifcor*f*v(j)*dtcalc ...
-               +nifwind*nifdif*diffac*(u(j+1)-2*u(j)+u(j-1));
+               +nifcor*f*v(j)*dtcalc;
     va(j)=vb(j)-nifwind*nifad*u(j).*(dtcalc/(dx*2)).*(v(j+1)-v(j-1)) ...
-               -nifcor*f*u(j)*dtcalc ...
-               +nifwind*nifdif*diffac*(v(j+1)-2*v(j)+v(j-1));
+               -nifcor*f*u(j)*dtcalc;
+
+    %diffusion evaluated from b->a (2 time steps)
+    diffac=kdif*dtcalc/dx/dx;
+    ha(j)=ha(j)+nifdif*diffac*(hb(j+1)-2*hb(j)+hb(j-1));
+    ua(j)=ua(j)+nifwind*nifdif*diffac*(ub(j+1)-2*ub(j)+ub(j-1));
+    va(j)=va(j)+nifwind*nifdif*diffac*(vb(j+1)-2*vb(j)+vb(j-1));
+    
     ub=u; u=ua;
     vb=v; v=va;
-    hb=h; h=ha;
+    hb=h; h=ha;    
 
-  elseif(numerics==2) %FTCS scheme
-    diffac=kdif*dt/dx/dx;
+  elseif(advection_scheme==2) %FTCS scheme
     ha(j)=h(j)-nifad*u(j).*(dt/(dx*2)).*(h(j+1)-h(j-1)) ...
-              -h(j).*(dt/(dx*2)).*(u(j+1)-u(j-1)) ...
-              +nifdif*diffac*(h(j+1)-2*h(j)+h(j-1));
+              -h(j).*(dt/(dx*2)).*(u(j+1)-u(j-1));
     ua(j)=u(j)-nifwind*nifad*u(j).*(dt/(dx*2)).*(u(j+1)-u(j-1)) ...
               -nifwind*(g*dt/(dx*2))*(h(j+1)-h(j-1)) ...
-              +nifcor*f*v(j)*dt ...
-              +nifwind*nifdif*diffac*(u(j+1)-2*u(j)+u(j-1));
+              +nifcor*f*v(j)*dt;
     va(j)=v(j)-nifwind*nifad*u(j).*(dt/(dx*2)).*(v(j+1)-v(j-1)) ...
-              -nifcor*f*u(j)*dt ...
-              +nifwind*nifdif*diffac*(v(j+1)-2*v(j)+v(j-1));
+              -nifcor*f*u(j)*dt;
     h=ha; u=ua; v=va;
   
-  elseif(numerics==3) %FTBS scheme
-    diffac=kdif*dt/dx/dx;
+  elseif(advection_scheme==3) %FTBS scheme (upstream)
     ha(j)=h(j)-nifad*u(j).*(dt/dx).*(h(j)-h(j-1)) ...
-              -h(j).*(dt/dx).*(u(j)-u(j-1)) ...
-              +nifdif*diffac*(h(j+1)-2*h(j)+h(j-1));
+              -h(j).*(dt/dx).*(u(j)-u(j-1));
     ua(j)=u(j)-nifwind*nifad*u(j).*(dt/dx).*(u(j)-u(j-1)) ...
               -nifwind*(g*dt/dx)*(h(j)-h(j-1)) ...
-              +nifcor*f*v(j)*dt ...
-              +nifwind*nifdif*diffac*(u(j+1)-2*u(j)+u(j-1));
+              +nifcor*f*v(j)*dt;
     va(j)=v(j)-nifwind*nifad*u(j).*(dt/dx).*(v(j)-v(j-1)) ...
-              -nifcor*f*u(j)*dt ...
-              +nifwind*nifdif*diffac*(v(j+1)-2*v(j)+v(j-1));
+              -nifcor*f*u(j)*dt;
     h=ha; u=ua; v=va;
   end
+  
   
   time=time+dt;
   
@@ -112,7 +115,7 @@ for n=1:nt
   
   %plot results
   if(show_animation==1 && mod(n,animation_stride)==0)
-    subplot(2,1,1)
+    %subplot(2,1,1)
     plot(x,h);
     if(show_analytic==1) %analytic solution for advection equation
       hold on;
@@ -122,8 +125,8 @@ for n=1:nt
       plot(x0(n0+1:end-1),h0(n0+1:end-1),'r');
       hold off;
     end
-    axis([dx/1000 (nx-2)*dx/1000 hbar-amp hbar+2*amp]);
-    ylabel('height'); title(['t = ' num2str(time) ' s'])
+    axis([dx/1000 (nx-2)*dx/1000 hbar-amp hbar+1.2*amp]);
+    ylabel('height'); title(['t = ' num2str(time/3600) ' h'])
     xlabel('x (km)')
     if(show_wind==1)
       subplot(2,1,2)
